@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Production Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f7fa;--sur:#fff;--sur2:#f0f4f8;--bdr:#e2e8f0;--bdr2:#cbd5e1;
+  --ink:#1a202c;--ink2:#4a5568;--ink3:#a0aec0;
+  --blu:#2563eb;--blu-l:#eff6ff;--blu-d:#1d4ed8;
+  --grn:#16a34a;--grn-l:#f0fdf4;
+  --red:#dc2626;--red-l:#fef2f2;
+  --yel:#d97706;
+  --nav-w:52px;
+  --r:10px;--r-sm:6px;
+  --sh:0 1px 3px rgba(0,0,0,.06);--sh-md:0 4px 16px rgba(0,0,0,.08);
+  --tr:.2s ease;
+}
+html,body{height:100%;font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--ink);font-size:14px}
+
+.app{display:flex;height:100vh;overflow:hidden}
+
+/* ── Sidebar ── */
+.sidebar{
+  width:var(--nav-w);flex-shrink:0;
+  background:var(--sur);border-right:1px solid var(--bdr);
+  display:flex;flex-direction:column;
+  box-shadow:var(--sh-md);z-index:100;
+}
+.sb-head{
+  height:52px;display:flex;align-items:center;justify-content:center;
+  border-bottom:1px solid var(--bdr);flex-shrink:0;
+}
+.sb-logo{width:28px;height:28px;background:var(--blu);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.sb-nav{flex:1;padding:8px;overflow-y:auto}
+.nav-item{
+  display:flex;align-items:center;justify-content:center;
+  height:40px;padding:0;border-radius:var(--r-sm);
+  cursor:pointer;transition:background .15s;color:var(--ink2);
+  margin-bottom:2px;border:none;background:transparent;width:100%;
+  font-size:18px;
+}
+.nav-item:hover{background:var(--sur2);color:var(--ink)}
+.nav-item.on{background:var(--blu-l);color:var(--blu)}
+.sb-foot{padding:12px;border-top:1px solid var(--bdr);display:flex;justify-content:center}
+.s-dot{width:7px;height:7px;border-radius:50%;background:var(--ink3)}
+
+/* ── Main ── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.topbar{
+  height:52px;background:var(--sur);border-bottom:1px solid var(--bdr);
+  display:flex;align-items:center;padding:0 18px;gap:12px;
+  flex-shrink:0;box-shadow:var(--sh);
+}
+.topbar-title{font-size:14px;font-weight:600;color:var(--ink)}
+.topbar-sub{font-size:11px;color:var(--ink3)}
+.btn-icon{width:32px;height:32px;padding:0;border:1.5px solid var(--bdr);border-radius:var(--r-sm);background:var(--sur);color:var(--ink2);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.btn-icon:hover{background:var(--sur2)}
+
+/* ── Pages ── */
+.pages{flex:1;overflow:hidden;position:relative}
+.page{position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity .25s ease;display:flex;overflow:hidden}
+.page.on{opacity:1;pointer-events:all}
+
+/* ── Entry page ── */
+.fp{width:310px;flex-shrink:0;background:var(--sur);border-right:1px solid var(--bdr);display:flex;flex-direction:column;overflow:hidden}
+.fp-head{padding:14px 16px 12px;border-bottom:1px solid var(--bdr);flex-shrink:0}
+.seg{display:flex;gap:3px;background:var(--bg);border-radius:8px;padding:3px;margin-bottom:10px}
+.seg-btn{flex:1;height:28px;border:none;border-radius:6px;font-family:'Sarabun',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;background:transparent;color:var(--ink3)}
+.seg-btn.on{background:var(--sur);color:var(--ink);box-shadow:var(--sh)}
+.fp-lbl{font-size:11px;font-weight:600;color:var(--ink2);display:flex;align-items:center;gap:5px}
+.fp-dot{width:4px;height:4px;border-radius:50%;background:var(--blu)}
+.fp-body{padding:12px 16px;flex:1;overflow-y:auto}
+.field{margin-bottom:10px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+lbl{display:block;font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px}
+lbl .r{color:var(--red);margin-left:2px}
+lbl .opt{color:var(--ink3);font-weight:400;text-transform:none;letter-spacing:0;font-size:10px}
+input,select{width:100%;height:36px;padding:0 10px;border:1.5px solid var(--bdr);border-radius:var(--r-sm);font-family:'Sarabun',sans-serif;font-size:13px;color:var(--ink);background:var(--sur);outline:none;transition:border-color .15s,box-shadow .15s}
+input:focus,select:focus{border-color:var(--blu);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+input.err,select.err{border-color:var(--red);box-shadow:0 0 0 3px rgba(220,38,38,.08)}
+.sel{position:relative}
+.sel::after{content:"▾";position:absolute;right:9px;top:50%;transform:translateY(-50%);color:var(--ink3);pointer-events:none;font-size:11px}
+.sel select{appearance:none;padding-right:26px;cursor:pointer}
+#fJo,#fOut{font-family:'IBM Plex Mono',monospace;letter-spacing:.08em}
+.etxt{font-size:10px;color:var(--red);font-weight:500;margin-top:2px;display:none}
+.etxt.show{display:block}
+.shift-chips{display:flex;gap:6px}
+.sch{flex:1;height:36px;border:1.5px solid var(--bdr);border-radius:var(--r-sm);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;background:var(--sur);color:var(--ink2);font-family:'IBM Plex Mono',monospace}
+.sch.on-A{background:#2563eb;border-color:#2563eb;color:#fff}
+.sch.on-B{background:#059669;border-color:#059669;color:#fff}
+.sch.on-C{background:#d97706;border-color:#d97706;color:#fff}
+.sch.err-c{border-color:var(--red)!important}
+.fp-foot{padding:10px 16px;border-top:1px solid var(--bdr);flex-shrink:0;display:flex;gap:6px}
+.btn{height:36px;padding:0 14px;border:none;border-radius:var(--r-sm);font-family:'Sarabun',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s}
+.btn:active{transform:scale(.97)}
+.btn-p{flex:1;background:var(--blu);color:#fff}
+.btn-p:hover{background:var(--blu-d)}
+.btn-p:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn-s{background:var(--sur2);color:var(--ink2);border:1.5px solid var(--bdr)}
+.btn-d{background:var(--red-l);color:var(--red);border:1.5px solid rgba(220,38,38,.3)}
+.spin{display:inline-block;width:11px;height:11px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:sp .6s linear infinite;vertical-align:middle;margin-right:4px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.dp{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.dp-head{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--bdr);background:var(--sur);flex-shrink:0}
+.dp-title{font-size:12px;font-weight:600;color:var(--ink2);display:flex;align-items:center;gap:6px}
+.cnt{background:var(--blu-l);color:var(--blu);font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px}
+.dp-hint{font-size:11px;color:var(--ink3)}
+.tw{flex:1;overflow:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead th{position:sticky;top:0;z-index:10;background:var(--sur2);color:var(--ink2);padding:8px 10px;text-align:left;font-size:10px;font-weight:600;letter-spacing:.06em;white-space:nowrap;border-bottom:2px solid var(--bdr);border-right:1px solid var(--bdr)}
+thead th:last-child{border-right:none}
+tbody tr{border-bottom:1px solid var(--bdr);cursor:pointer;transition:background .1s}
+tbody tr:hover{background:var(--blu-l)}
+tbody tr.sel-row{background:#dbeafe!important}
+tbody tr.nr{animation:nr .5s ease}
+@keyframes nr{from{background:var(--grn-l)}to{background:transparent}}
+tbody td{padding:8px 10px;color:var(--ink2);white-space:nowrap;border-right:1px solid var(--bdr)}
+tbody td:last-child{border-right:none;color:var(--ink3);font-size:11px;font-style:italic}
+tbody td:first-child{color:var(--ink3);font-family:'IBM Plex Mono',monospace;font-size:11px;text-align:center}
+.mono{font-family:'IBM Plex Mono',monospace}
+.tc{text-align:center}
+.sh-A{color:#2563eb;font-weight:600}
+.sh-B{color:#059669;font-weight:600}
+.sh-C{color:#d97706;font-weight:600}
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:250px;color:var(--ink3);gap:8px}
+.empty-i{font-size:32px;opacity:.3}
+
+/* ── Dashboard ── */
+.dash-page{flex-direction:column}
+.filter-bar{display:flex;align-items:center;gap:8px;padding:6px 14px;background:var(--sur);border-bottom:1px solid var(--bdr);flex-shrink:0;flex-wrap:wrap}
+.filter-bar select{width:auto;height:30px;padding:0 24px 0 8px;font-size:12px;border-radius:var(--r-sm);border-width:1px}
+.filter-label{font-size:11px;color:var(--ink3);font-weight:500}
+.filter-sep{width:1px;height:20px;background:var(--bdr);margin:0 2px}
+.mc-chips{display:flex;gap:4px;flex-wrap:wrap}
+.mc-chip{height:26px;padding:0 10px;border:1.5px solid var(--bdr);border-radius:13px;font-size:11px;font-weight:500;cursor:pointer;transition:all .15s;background:transparent;color:var(--ink2)}
+.mc-chip:hover{border-color:var(--bdr2);color:var(--ink)}
+.mc-chip.on{background:var(--blu);border-color:var(--blu);color:#fff}
+.dash-body{flex:1;display:flex;overflow:hidden;min-height:0}
+.charts-area{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.kpi-sidebar{width:188px;flex-shrink:0;border-left:1px solid var(--bdr);background:var(--sur);overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:6px}
+.kpi{background:var(--sur2);border:1px solid var(--bdr);border-radius:var(--r);padding:8px 10px}
+.kpi-label{font-size:9px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px}
+.kpi-val{font-size:16px;font-weight:700;color:var(--ink);font-family:'IBM Plex Mono',monospace;line-height:1.2}
+.kpi-val.pos{color:var(--grn)}
+.kpi-val.neg{color:var(--red)}
+.kpi-sub{font-size:9px;color:var(--ink3);margin-top:3px}
+.kpi-divider{height:1px;background:var(--bdr);margin:2px 0}
+.chart-box{background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r);padding:10px 12px;box-shadow:var(--sh)}
+.chart-title{font-size:12px;font-weight:600;color:var(--ink2);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between}
+.legend{display:flex;gap:10px;flex-wrap:wrap}
+.leg-item{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--ink2)}
+.leg-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+.leg-line{width:14px;height:2px;flex-shrink:0}
+.chart-wrap{position:relative;height:160px}
+.chart-wrap.tall{height:190px}
+
+/* Color panel */
+.color-panel{position:fixed;top:60px;right:16px;background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r);box-shadow:var(--sh-md);padding:14px;width:280px;z-index:400;display:none}
+.color-panel.open{display:block}
+.color-panel-title{font-size:12px;font-weight:600;color:var(--ink);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+.color-row{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.color-row-label{font-size:11px;color:var(--ink2);flex:1;min-width:90px}
+.palette{display:flex;gap:4px;flex-wrap:wrap}
+.pal-dot{width:20px;height:20px;border-radius:4px;cursor:pointer;border:2px solid transparent;transition:transform .1s,border-color .1s;flex-shrink:0}
+.pal-dot:hover{transform:scale(1.15)}
+.pal-dot.active{border-color:var(--ink)}
+.color-reset{font-size:11px;color:var(--blu);cursor:pointer;text-decoration:underline;margin-top:6px;display:inline-block}
+
+/* Shared */
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--ink);color:#fff;padding:9px 18px;border-radius:20px;font-size:12px;font-weight:500;transition:transform .3s cubic-bezier(.34,1.56,.64,1),opacity .3s;opacity:0;pointer-events:none;white-space:nowrap;z-index:999;box-shadow:var(--sh-md)}
+#toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+#toast.ok{background:var(--grn)}
+#toast.fail{background:var(--red)}
+#ld{position:fixed;inset:0;background:rgba(245,247,250,.9);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;z-index:1000}
+#ld .ld-sp{width:36px;height:36px;border:3px solid var(--bdr2);border-top-color:var(--blu);border-radius:50%;animation:sp .7s linear infinite}
+#ld .ld-tx{color:var(--ink2);font-size:13px}
+#ld.h{display:none}
+#cfm{position:fixed;inset:0;background:rgba(26,32,44,.35);display:flex;align-items:center;justify-content:center;z-index:500}
+#cfm.h{display:none}
+.cfm-box{background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r);padding:22px;width:290px;box-shadow:var(--sh-md);text-align:center}
+.cfm-ic{font-size:28px;margin-bottom:8px}
+.cfm-ti{font-size:14px;font-weight:600;margin-bottom:5px}
+.cfm-ms{font-size:12px;color:var(--ink2);margin-bottom:16px}
+.cfm-bt{display:flex;gap:6px}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- Sidebar -->
+<div class="sidebar">
+  <div class="sb-head"><div class="sb-logo">📊</div></div>
+  <nav class="sb-nav">
+    <button class="nav-item on" onclick="showPage('entry')" id="nav-entry" title="บันทึกข้อมูล">📋</button>
+    <button class="nav-item" onclick="showPage('dash')" id="nav-dash" title="Dashboard">📈</button>
+  </nav>
+  <div class="sb-foot"><span class="s-dot" id="sDot"></span></div>
+</div>
+
+<!-- Main -->
+<div class="main">
+  <div class="topbar">
+    <span class="topbar-title" id="pageTitle">บันทึกข้อมูล</span>
+    <span class="topbar-sub" id="pageDate"></span>
+    <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+      <button class="btn-icon" id="btnRefresh" onclick="refreshData()" title="Refresh ข้อมูล" style="display:none">🔄</button>
+      <button class="btn-icon" id="btnColor" onclick="toggleColorPanel()" title="ปรับสีกราฟ" style="display:none">🎨</button>
+    </div>
+  </div>
+
+  <div class="pages">
+
+    <!-- Entry page -->
+    <div class="page on" id="pageEntry">
+      <div class="fp">
+        <div class="fp-head">
+          <div class="seg">
+            <button class="seg-btn on" id="bAdd" onclick="setMode('add')">➕ เพิ่ม</button>
+            <button class="seg-btn" id="bEdt" onclick="setMode('edit')">✏️ แก้ไข</button>
+          </div>
+          <div class="fp-lbl"><span class="fp-dot"></span><span id="fpLbl">กรอกข้อมูลใหม่</span></div>
+        </div>
+        <div class="fp-body">
+          <div class="row2">
+            <div class="field">
+              <lbl>Date <span class="r">*</span></lbl>
+              <input type="date" id="fDate" tabindex="1">
+              <div class="etxt" id="e-date">กรุณาเลือกวันที่</div>
+            </div>
+            <div class="field">
+              <lbl>MC <span class="r">*</span></lbl>
+              <div class="sel"><select id="fMc" tabindex="2"></select></div>
+              <div class="etxt" id="e-mc">กรุณาเลือก MC</div>
+            </div>
+          </div>
+          <div class="field">
+            <lbl>Shift <span class="r">*</span></lbl>
+            <div class="shift-chips" id="shiftChips"></div>
+            <div class="etxt" id="e-shift">กรุณาเลือก Shift</div>
+          </div>
+          <div class="field">
+            <lbl>Output <span class="r">*</span></lbl>
+            <input type="number" id="fOut" tabindex="3" placeholder="50000" min="0">
+            <div class="etxt" id="e-out">กรุณากรอก Output</div>
+          </div>
+          <div class="row2">
+            <div class="field">
+              <lbl>JO <span class="opt">(optional)</span></lbl>
+              <input type="number" id="fJo" tabindex="4" placeholder="12345">
+              <div class="etxt" id="e-jo">ต้องเป็นตัวเลข 5 หลัก</div>
+            </div>
+            <div class="field">
+              <lbl>Product Code <span class="opt">(optional)</span></lbl>
+              <input type="text" id="fCode" tabindex="5" placeholder="เช่น ABC-001">
+            </div>
+          </div>
+        </div>
+        <div class="fp-foot" id="fpFoot">
+          <button class="btn btn-s" onclick="clearForm()">ล้าง</button>
+          <button class="btn btn-p" id="bSub" tabindex="6" onclick="submitForm()">บันทึก</button>
+        </div>
+      </div>
+      <div class="dp">
+        <div class="dp-head">
+          <div class="dp-title">ข้อมูลทั้งหมด <span class="cnt" id="cnt">0</span></div>
+          <span class="dp-hint" id="hint">คลิก row เพื่อแก้ไข</span>
+        </div>
+        <div class="tw">
+          <table>
+            <thead><tr><th>No.</th><th>Date</th><th>MC</th><th>Shift</th><th>JO</th><th>Product Code</th><th>Output</th><th>Timestamp</th></tr></thead>
+            <tbody id="tb"></tbody>
+          </table>
+          <div class="empty" id="emp"><div class="empty-i">📭</div><div>ยังไม่มีข้อมูลครับ</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dashboard page -->
+    <div class="page dash-page" id="pageDash">
+      <div style="display:flex;flex-direction:column;flex:1;min-width:0;overflow:hidden">
+        <div class="filter-bar">
+          <span class="filter-label">ปี</span>
+          <div class="sel"><select id="dYear" onchange="renderDash()"></select></div>
+          <span class="filter-label">เดือน</span>
+          <div class="sel"><select id="dMonth" onchange="renderDash()"></select></div>
+          <div class="filter-sep"></div>
+          <span class="filter-label">MC</span>
+          <div class="mc-chips" id="dMcChips"></div>
+        </div>
+        <div class="dash-body">
+          <div class="charts-area">
+            <div class="chart-box">
+              <div class="chart-title"><span>Daily Output</span><div class="legend" id="legDaily"></div></div>
+              <div class="chart-wrap tall"><canvas id="cDaily"></canvas></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <div class="chart-box">
+                <div class="chart-title"><span>Monthly Output</span><div class="legend" id="legMonthly"></div></div>
+                <div class="chart-wrap"><canvas id="cMonthly"></canvas></div>
+              </div>
+              <div class="chart-box">
+                <div class="chart-title"><span>Cost Saving / Profit</span><div class="legend" id="legCost"></div></div>
+                <div class="chart-wrap"><canvas id="cCost"></canvas></div>
+              </div>
+            </div>
+          </div>
+          <div class="kpi-sidebar">
+            <div style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.07em;padding-bottom:4px;border-bottom:1px solid var(--bdr)">KPI</div>
+            <div class="kpi"><div class="kpi-label">Monthly Output</div><div class="kpi-val" id="kMO">—</div><div class="kpi-sub">sheets</div></div>
+            <div class="kpi"><div class="kpi-label">vs Target</div><div class="kpi-val" id="kVT">—</div><div class="kpi-sub" id="kVTsub">sheets</div></div>
+            <div class="kpi-divider"></div>
+            <div class="kpi"><div class="kpi-label">Total Output</div><div class="kpi-val" id="kTO">—</div><div class="kpi-sub">all time</div></div>
+            <div class="kpi-divider"></div>
+            <div class="kpi"><div class="kpi-label">Monthly Saving</div><div class="kpi-val" id="kMS">—</div><div class="kpi-sub">THB</div></div>
+            <div class="kpi"><div class="kpi-label">Total Saving</div><div class="kpi-val" id="kTS">—</div><div class="kpi-sub">THB (all time)</div></div>
+            <div class="kpi-divider"></div>
+            <div class="kpi"><div class="kpi-label">Work Days</div><div class="kpi-val" id="kWD">—</div><div class="kpi-sub" id="kWDsub">days</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</div>
+
+<!-- Color panel -->
+<div class="color-panel" id="colorPanel">
+  <div class="color-panel-title">🎨 ปรับสีกราฟ<span style="cursor:pointer;color:var(--ink3);font-size:16px" onclick="toggleColorPanel()">×</span></div>
+  <div id="colorRows"></div>
+  <span class="color-reset" onclick="resetColors()">↺ Reset ค่าเริ่มต้น</span>
+</div>
+
+<div id="toast"></div>
+<div id="ld"><div class="ld-sp"></div><div class="ld-tx" id="ldTx">กำลังโหลดข้อมูล...</div></div>
+<div id="cfm" class="h">
+  <div class="cfm-box">
+    <div class="cfm-ic">🗑️</div>
+    <div class="cfm-ti">ลบรายการนี้?</div>
+    <div class="cfm-ms" id="cfmMs">ไม่สามารถกู้คืนได้ครับ</div>
+    <div class="cfm-bt">
+      <button class="btn btn-s" style="flex:1" onclick="closeCfm()">ยกเลิก</button>
+      <button class="btn btn-d" style="flex:1" onclick="doDelete()">ลบเลย</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+//  CONFIG — แก้ค่าตรงนี้
+// ══════════════════════════════════════════════════════════
+var API_KEY = "AIzaSyDD1S3f8LnmGWlzZ9F0QxHhe_P850sKshE";
+var SS_ID   = "12y9V7-mSdSC--uhK9Yb5wSAHIpGxlB-l_DEAg17fTZw";
+var GAS_URL = ""; // ← ใส่ GAS Web App URL สำหรับเขียนข้อมูล (จาก project เดิม)
+
+var DATA_SHEET   = "Data";
+var CONFIG_SHEET = "Config";
+var MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+// ══════════════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════════════
+var CFG      = { mc:[], shift:[], params:{} };
+var rows     = [];
+var mode     = "add";
+var selShift = "";
+var editIdx  = null;
+var delIdx   = null;
+var charts   = {};
+var selMc    = "";
+
+var DEFAULT_COLORS = {
+  shiftA:"#2563eb", shiftB:"#059669", shiftC:"#d97706",
+  target:"#16a34a", accTarget:"#dc2626", accOut:"#7c3aed",
+  moAcc:"#d97706", costPos:"#16a34a", costNeg:"#dc2626", costCum:"#2563eb"
+};
+var COLOR_LABELS = {
+  shiftA:"Shift A", shiftB:"Shift B", shiftC:"Shift C",
+  target:"Target/day", accTarget:"Acc.Target", accOut:"Accumulate",
+  moAcc:"Monthly Acc.", costPos:"Saving(+)", costNeg:"Saving(-)", costCum:"Cumulative"
+};
+var PALETTE = [
+  "#2563eb","#059669","#d97706","#dc2626","#7c3aed","#0891b2",
+  "#16a34a","#ea580c","#db2777","#65a30d","#0f766e","#9333ea",
+  "#1d4ed8","#15803d","#b45309","#991b1b","#6d28d9","#0e7490",
+  "#374151","#6b7280","#94a3b8","#f59e0b","#10b981","#3b82f6"
+];
+var colors = loadColors();
+
+// ══════════════════════════════════════════════════════════
+//  BOOT — อ่านข้อมูลจาก Sheets API
+// ══════════════════════════════════════════════════════════
+window.addEventListener("DOMContentLoaded", function() {
+  id("pageDate").textContent = new Date().toLocaleDateString("th-TH", {year:"numeric",month:"long",day:"numeric"});
+  buildColorPanel();
+  fetchAllData();
+});
+
+function fetchAllData() {
+  id("ld").classList.remove("h");
+  id("ldTx").textContent = "กำลังโหลดข้อมูล...";
+
+  var base = "https://sheets.googleapis.com/v4/spreadsheets/" + SS_ID + "/values/";
+  var key  = "?key=" + API_KEY;
+
+  Promise.all([
+    fetch(base + encodeURIComponent(DATA_SHEET) + "!A:H" + key).then(function(r){ return r.json(); }),
+    fetch(base + encodeURIComponent(CONFIG_SHEET) + "!A:L" + key).then(function(r){ return r.json(); })
+  ]).then(function(results) {
+    parseConfig(results[1].values || []);
+    parseData(results[0].values || []);
+    buildMc(); buildShiftChips(); setToday(); renderTable(); buildDashFilters();
+    id("ld").classList.add("h");
+    id("sDot").style.background = "#16a34a";
+    toast("✅ โหลดข้อมูลแล้วครับ", "ok");
+  }).catch(function(e) {
+    id("ld").classList.add("h");
+    id("sDot").style.background = "#dc2626";
+    toast("❌ โหลดไม่สำเร็จ: " + e.message, "fail");
+  });
+}
+
+function refreshData() {
+  fetchAllData();
+}
+
+function parseConfig(values) {
+  // Col A(0)=MC, Col C(2)=Shift, Col E-K(4-10)=Params
+  var mc=[], shift=[], params={};
+  for (var i = 1; i < values.length; i++) {
+    var r = values[i] || [];
+    if (r[0] && !String(r[0]).startsWith("↑")) mc.push(String(r[0]).trim());
+    if (r[2] && !String(r[2]).startsWith("↑")) shift.push(String(r[2]).trim());
+    if (r[4] && !String(r[4]).startsWith("↑")) {
+      var mc_name = String(r[4]).trim();
+      params[mc_name] = {
+        target : +r[5]||0, price:+r[6]||0, bench:+r[7]||0,
+        mcost  : +r[8]||0, salvage:+r[9]||0, life:+r[10]||10
+      };
+    }
+  }
+  CFG = { mc:mc, shift:shift, params:params };
+}
+
+function parseData(values) {
+  rows = [];
+  if (!values || values.length < 2) return;
+  for (var i = 1; i < values.length; i++) {
+    var r = values[i] || [];
+    if (!r[0]) continue;
+    rows.push({
+      no: r[0], date: r[1]||"", mc: r[2]||"", shift: r[3]||"",
+      jo: r[4]||"", code: r[5]||"", output: +r[6]||0, timestamp: r[7]||"",
+      sheetRow: i + 1
+    });
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+//  FORM WRITE — ส่งไป GAS Web App
+// ══════════════════════════════════════════════════════════
+function submitForm() {
+  if (!valid()) return;
+  if (!GAS_URL) { toast("⚠️ กรุณาใส่ GAS_URL ก่อนครับ", "fail"); return; }
+
+  var btn = id("bSub");
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span>กำลังบันทึก...';
+
+  var form = {
+    date:id("fDate").value, mc:id("fMc").value, shift:selShift,
+    output:id("fOut").value, jo:id("fJo").value, code:id("fCode").value
+  };
+
+  if (mode === "edit") form.sheetRow = rows[editIdx].sheetRow;
+
+  var action = mode === "edit" ? "updateRow" : "addRow";
+
+  fetch(GAS_URL, {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ action:action, form:form })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(res) {
+    btn.disabled = false;
+    btn.textContent = mode === "edit" ? "บันทึกการแก้ไข" : "บันทึก";
+    if (res.ok) {
+      toast("✅ บันทึกแล้วครับ", "ok");
+      if (mode === "edit") setMode("add");
+      else clearForm();
+      setTimeout(fetchAllData, 800); // refresh หลังบันทึก
+    } else toast("❌ " + res.error, "fail");
+  })
+  .catch(function(e){ btn.disabled=false; btn.textContent="บันทึก"; toast("❌ "+e.message,"fail"); });
+}
+
+// ══════════════════════════════════════════════════════════
+//  NAV
+// ══════════════════════════════════════════════════════════
+function showPage(p) {
+  document.querySelectorAll(".nav-item").forEach(function(el){ el.classList.remove("on"); });
+  id("nav-"+p).classList.add("on");
+  document.querySelectorAll(".page").forEach(function(el){ el.classList.remove("on"); });
+  id("page"+p.charAt(0).toUpperCase()+p.slice(1)).classList.add("on");
+  var titles = { entry:"บันทึกข้อมูล", dash:"Dashboard" };
+  id("pageTitle").textContent = titles[p] || p;
+  id("btnColor").style.display = p==="dash" ? "flex" : "none";
+  id("btnRefresh").style.display = p==="dash" ? "flex" : "none";
+  if (p==="dash") renderDash();
+}
+
+// ══════════════════════════════════════════════════════════
+//  FORM UI
+// ══════════════════════════════════════════════════════════
+function buildMc() {
+  var s = id("fMc"); s.innerHTML = '<option value="">— เลือก —</option>';
+  CFG.mc.forEach(function(v){ var o=document.createElement("option"); o.value=o.textContent=v; s.appendChild(o); });
+}
+
+function buildShiftChips() {
+  var g = id("shiftChips"); g.innerHTML = "";
+  CFG.shift.forEach(function(v) {
+    var b = document.createElement("button");
+    b.type="button"; b.className="sch"; b.textContent=v; b.dataset.v=v;
+    b.onclick = function() {
+      document.querySelectorAll(".sch").forEach(function(c){ c.className="sch"; });
+      b.classList.add("on-"+v); selShift=v; clrE("shift");
+    };
+    g.appendChild(b);
+  });
+}
+
+function renderTable() {
+  var tb=id("tb");
+  id("cnt").textContent = rows.length;
+  id("emp").style.display = rows.length ? "none" : "flex";
+  if (!rows.length) { tb.innerHTML=""; return; }
+  tb.innerHTML = rows.map(function(r,i){
+    var sc="sh-"+r.shift;
+    return "<tr onclick='rowClick("+i+")' class='"+(i===editIdx?"sel-row":"")+(r._p?" nr":"")+"'>"+
+      "<td class='mono tc'>"+r.no+"</td><td>"+r.date+"</td><td class='tc'>"+r.mc+"</td>"+
+      "<td class='tc mono "+sc+"'>"+r.shift+"</td><td class='mono tc'>"+(r.jo||"—")+"</td>"+
+      "<td>"+(r.code||"—")+"</td><td class='mono tc'>"+Number(r.output).toLocaleString()+"</td>"+
+      "<td>"+r.timestamp+"</td></tr>";
+  }).join("");
+}
+
+function rowClick(i) {
+  if (mode!=="edit") { setMode("edit"); setTimeout(function(){ loadRow(i); },50); }
+  else loadRow(i);
+}
+
+function loadRow(i) {
+  editIdx=i; var r=rows[i];
+  var m=String(r.date).match(/(\d+)\s+(\w+)\s+(\d+)/);
+  var dv="";
+  if (m) { var y=m[3].length===2?+m[3]+2000:+m[3]; var mi=MONTHS.indexOf(m[2]); dv=y+"-"+String(mi+1).padStart(2,"0")+"-"+m[1].padStart(2,"0"); }
+  id("fDate").value=dv; id("fMc").value=r.mc; id("fOut").value=r.output;
+  id("fJo").value=r.jo||""; id("fCode").value=r.code||"";
+  selShift=r.shift;
+  document.querySelectorAll(".sch").forEach(function(c){ c.className="sch"; if(c.dataset.v===r.shift) c.classList.add("on-"+r.shift); });
+  id("fpLbl").textContent="แก้ไขรายการที่ "+r.no;
+  renderTable();
+}
+
+function setMode(m) {
+  mode=m;
+  id("bAdd").classList.toggle("on",m==="add");
+  id("bEdt").classList.toggle("on",m==="edit");
+  id("hint").textContent=m==="edit"?"คลิก row ที่ต้องการแก้ไข":"คลิก row เพื่อแก้ไข";
+  if (m==="add") {
+    id("fpLbl").textContent="กรอกข้อมูลใหม่";
+    id("fpFoot").innerHTML='<button class="btn btn-s" onclick="clearForm()">ล้าง</button><button class="btn btn-p" id="bSub" tabindex="6" onclick="submitForm()">บันทึก</button>';
+    editIdx=null; clearForm();
+  } else {
+    id("fpLbl").textContent="แก้ไขรายการ";
+    id("fpFoot").innerHTML='<button class="btn btn-d" onclick="askDel()">ลบ</button><button class="btn btn-s" onclick="setMode(\'add\')">ยกเลิก</button><button class="btn btn-p" id="bSub" tabindex="6" onclick="submitForm()">บันทึกการแก้ไข</button>';
+  }
+}
+
+function askDel() {
+  if (editIdx===null) { toast("กรุณาเลือก row ก่อนครับ","fail"); return; }
+  var r=rows[editIdx];
+  id("cfmMs").textContent="ลบรายการที่ "+r.no+" — "+r.mc+" Shift "+r.shift+"?";
+  delIdx=editIdx; id("cfm").classList.remove("h");
+}
+function closeCfm(){ id("cfm").classList.add("h"); delIdx=null; }
+function doDelete(){
+  closeCfm();
+  if (!GAS_URL) { toast("⚠️ กรุณาใส่ GAS_URL ก่อนครับ","fail"); return; }
+  var sr=rows[delIdx].sheetRow;
+  fetch(GAS_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"deleteRow",sheetRow:sr})})
+  .then(function(r){ return r.json(); })
+  .then(function(res){
+    if(res.ok){ toast("🗑️ ลบแล้วครับ","ok"); editIdx=null; setMode("add"); setTimeout(fetchAllData,800); }
+    else toast("❌ "+res.error,"fail");
+  }).catch(function(e){ toast("❌ "+e.message,"fail"); });
+}
+
+function valid() {
+  var ok=true;
+  var date=id("fDate").value, mc=id("fMc").value, out=id("fOut").value, jo=id("fJo").value;
+  var outOk=out!==""&&!isNaN(out);
+  var joOk=!jo||(String(jo).length===5&&!isNaN(jo));
+  setE("date",!date); if(!date) ok=false;
+  setE("mc",!mc); if(!mc) ok=false;
+  setE("shift",!selShift); if(!selShift) ok=false;
+  setE("out",!outOk); if(!outOk) ok=false;
+  setE("jo",!joOk); if(!joOk) ok=false;
+  return ok;
+}
+function setE(k,show){
+  id("e-"+k)&&id("e-"+k).classList.toggle("show",show);
+  if(k==="shift"){ document.querySelectorAll(".sch").forEach(function(c){ c.classList.toggle("err-c",show); }); }
+  else{ var el=id("f"+k[0].toUpperCase()+k.slice(1)); if(el) el.classList.toggle("err",show); }
+}
+function clrE(k){ setE(k,false); }
+function clearForm(){
+  ["fMc","fJo","fCode","fOut"].forEach(function(k){ var el=id(k); if(el){el.value="";el.classList.remove("err");} });
+  selShift=""; editIdx=null;
+  document.querySelectorAll(".sch").forEach(function(c){ c.className="sch"; });
+  document.querySelectorAll(".etxt").forEach(function(e){ e.classList.remove("show"); });
+  setToday();
+}
+function setToday(){
+  var t=new Date();
+  id("fDate").value=t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0")+"-"+String(t.getDate()).padStart(2,"0");
+}
+
+// ══════════════════════════════════════════════════════════
+//  DASHBOARD
+// ══════════════════════════════════════════════════════════
+function buildDashFilters(){
+  var years=[];
+  rows.forEach(function(r){ var y=parseYear(r.date); if(y&&!years.includes(y)) years.push(y); });
+  if(!years.length) years=[new Date().getFullYear()];
+  years.sort();
+  var ys=id("dYear"); ys.innerHTML="";
+  years.forEach(function(y){ var o=document.createElement("option"); o.value=y; o.textContent=y; ys.appendChild(o); });
+  ys.value=years[years.length-1];
+  var ms=id("dMonth"); ms.innerHTML='<option value="0">ทั้งหมด</option>';
+  MONTHS.forEach(function(m,i){ var o=document.createElement("option"); o.value=i+1; o.textContent=(i+1)+" - "+m; ms.appendChild(o); });
+  ms.value=new Date().getMonth()+1;
+  buildMcChips();
+}
+
+function buildMcChips(){
+  var g=id("dMcChips"); g.innerHTML="";
+  if(!CFG.mc.length) return;
+  selMc=CFG.mc[0]; colors=loadColors();
+  CFG.mc.forEach(function(mc){
+    var b=document.createElement("button");
+    b.className="mc-chip"+(mc===selMc?" on":""); b.textContent=mc;
+    b.onclick=function(){ selMc=mc; colors=loadColors(); document.querySelectorAll(".mc-chip").forEach(function(c){ c.classList.toggle("on",c.textContent===mc); }); renderDash(); };
+    g.appendChild(b);
+  });
+}
+
+function renderDash(){
+  var year=+id("dYear").value, month=+id("dMonth").value, mc=selMc, p=CFG.params[mc]||{};
+  var mcRows=rows.filter(function(r){ return r.mc===mc&&!r._p; });
+
+  function getWorkDays(yr,mo){ var d={}; mcRows.filter(function(r){ return parseYear(r.date)===yr&&parseMonth(r.date)===mo; }).forEach(function(r){ d[parseDay(r.date)]=true; }); return Object.keys(d).length; }
+  function getDaysInMonth(yr,mo){ return new Date(yr,mo,0).getDate(); }
+  function costSaving(actualOut,yr,mo){
+    if(!p.mcost) return 0;
+    var dim=getDaysInMonth(yr,mo), wd=getWorkDays(yr,mo), ratio=wd/dim;
+    var residual=p.mcost*0.10, netCost=p.mcost-p.salvage-residual;
+    var deprMo=netCost/((p.life||10)*12);
+    var benchAdj=(p.bench/dim)*wd;
+    return (actualOut-benchAdj)*p.price-deprMo;
+  }
+
+  var monthGroups={};
+  mcRows.forEach(function(r){ var k=parseYear(r.date)+"-"+String(parseMonth(r.date)).padStart(2,"0"); monthGroups[k]=(monthGroups[k]||0)+(+r.output||0); });
+
+  var filteredRows=month>0 ? mcRows.filter(function(r){ return parseYear(r.date)===year&&parseMonth(r.date)===month; }) : mcRows.filter(function(r){ return parseYear(r.date)===year; });
+  var monthlyOut=filteredRows.reduce(function(s,r){ return s+(+r.output||0); },0);
+  var totalOut=mcRows.reduce(function(s,r){ return s+(+r.output||0); },0);
+
+  var keys=Object.keys(monthGroups).sort(), cumCost=0, costByMo={};
+  keys.forEach(function(k){ var parts=k.split("-"); var c=costSaving(monthGroups[k],+parts[0],+parts[1]); cumCost+=c; costByMo[k]=c; });
+
+  var monthlyCost=0;
+  if(month>0){ var mk=year+"-"+String(month).padStart(2,"0"); monthlyCost=costByMo[mk]||0; }
+  else keys.filter(function(k){ return k.startsWith(year+"-"); }).forEach(function(k){ monthlyCost+=costByMo[k]||0; });
+
+  var dispMonth=month>0?month:new Date().getMonth()+1;
+  var wd=getWorkDays(year,dispMonth), dim=getDaysInMonth(year,dispMonth);
+  var target=p.target||0, targetAdj=month>0?(target/dim)*wd:target;
+
+  id("kMO").textContent=monthlyOut.toLocaleString();
+  var vtDiff=monthlyOut-Math.round(targetAdj);
+  id("kVT").textContent=(vtDiff>=0?"+":"")+vtDiff.toLocaleString();
+  id("kVT").className="kpi-val "+(vtDiff>=0?"pos":"neg");
+  id("kVTsub").textContent="vs target "+Math.round(targetAdj).toLocaleString();
+  id("kTO").textContent=totalOut.toLocaleString();
+  id("kMS").textContent=fmtTHB(monthlyCost); id("kMS").className="kpi-val "+(monthlyCost>=0?"pos":"neg");
+  id("kTS").textContent=fmtTHB(cumCost); id("kTS").className="kpi-val "+(cumCost>=0?"pos":"neg");
+  id("kWD").textContent=wd; id("kWDsub").textContent="จาก "+dim+" วัน ("+Math.round(wd/dim*100)+"%)";
+
+  // Daily chart
+  var dYear=year, dMonth=month>0?month:dispMonth, daysInMonth=getDaysInMonth(dYear,dMonth);
+  var targetDay=target/daysInMonth;
+  var dayA=[],dayB=[],dayC=[],labels=[];
+  for(var d=1;d<=daysInMonth;d++){ dayA.push(0);dayB.push(0);dayC.push(0);labels.push(d); }
+  mcRows.filter(function(r){ return parseYear(r.date)===dYear&&parseMonth(r.date)===dMonth; })
+    .forEach(function(r){ var day=parseDay(r.date)-1; if(day<0||day>=daysInMonth) return; var s=String(r.shift).toUpperCase(); if(s==="A") dayA[day]+=(+r.output||0); else if(s==="B") dayB[day]+=(+r.output||0); else dayC[day]+=(+r.output||0); });
+
+  var accTarget=[],accOut=[],cumT=0,cumO=0;
+  for(var i=0;i<daysInMonth;i++){ cumT+=targetDay; var dt=dayA[i]+dayB[i]+dayC[i]; cumO+=dt; accTarget.push(Math.round(cumT)); accOut.push(cumO>0?cumO:null); }
+  var lastAccT=Math.round(cumT), lastAccO=cumO, lastTDay=Math.round(targetDay);
+  var maxDailyBar=Math.max.apply(null,labels.map(function(_,i){ return (dayA[i]||0)+(dayB[i]||0)+(dayC[i]||0); }).concat([0]))*1.5;
+  var maxDailyY2=Math.max.apply(null,accTarget.concat(accOut.filter(function(v){ return v!==null; })).concat([0]))*1.5;
+
+  var _now=new Date(), todayIdx=(dYear===_now.getFullYear()&&dMonth===_now.getMonth()+1)?_now.getDate()-1:-1;
+
+  mkChart("cDaily","bar",labels,[
+    {label:"Shift A",data:dayA,backgroundColor:colors.shiftA+"cc",stack:"s",order:3},
+    {label:"Shift B",data:dayB,backgroundColor:colors.shiftB+"cc",stack:"s",order:3},
+    {label:"Shift C",data:dayC,backgroundColor:colors.shiftC+"cc",stack:"s",order:3},
+    {label:"Target/day",data:Array(daysInMonth).fill(lastTDay),type:"line",borderColor:colors.target,backgroundColor:"transparent",borderDash:[4,3],pointRadius:0,borderWidth:1.5,yAxisID:"y",order:1,clip:false},
+    {label:"Acc.Target",data:accTarget,type:"line",borderColor:colors.accTarget,backgroundColor:"transparent",pointRadius:0,borderWidth:2,yAxisID:"y2",order:1,clip:false,segment:{borderDash:function(ctx){ return ctx.p0.parsed.y===null?[4,3]:[]; }}},
+    {label:"Accumulate",data:accOut,type:"line",borderColor:colors.accOut,backgroundColor:"transparent",pointRadius:0,borderWidth:2,yAxisID:"y2",order:1,clip:false}
+  ],{
+    animation:{duration:600,easing:"easeInOutQuart"},
+    scales:{
+      y:{stacked:true,position:"left",ticks:{display:false},grid:{display:false},max:maxDailyBar||undefined},
+      y2:{position:"right",ticks:{display:false},grid:{display:false},max:maxDailyY2||undefined}
+    },
+    plugins:{legend:{display:false},tooltip:{mode:"index",intersect:false,backgroundColor:"rgba(255,255,255,.97)",titleColor:"#1a202c",bodyColor:"#4a5568",borderColor:"#e2e8f0",borderWidth:1}}
+  },[
+    {matchLabel:"Target/day",label:"Target/day: "+lastTDay.toLocaleString(),color:colors.target},
+    {matchLabel:"Acc.Target",label:"Acc.Target: "+lastAccT.toLocaleString(),color:colors.accTarget},
+    {matchLabel:"Accumulate",label:"Acc.Out: "+lastAccO.toLocaleString(),color:colors.accOut}
+  ],todayIdx);
+
+  buildLegend("legDaily",[
+    {dot:true,color:colors.shiftA,label:"Shift A"},{dot:true,color:colors.shiftB,label:"Shift B"},{dot:true,color:colors.shiftC,label:"Shift C"},
+    {dot:false,color:colors.target,label:"Target/day"},{dot:false,color:colors.accTarget,label:"Acc.Target"},{dot:false,color:colors.accOut,label:"Accumulate"}
+  ]);
+
+  // Monthly chart
+  var now2=new Date(), nowKey=now2.getFullYear()+"-"+String(now2.getMonth()+1).padStart(2,"0");
+  var moKeys=keys.filter(function(k){ return k<=nowKey; });
+  var moLabels=[],moA=[],moB=[],moC=[],moAccData=[],cumMo=0;
+  moKeys.forEach(function(k){
+    var parts=k.split("-"); moLabels.push(MONTHS[+parts[1]-1]+" "+parts[0].slice(2));
+    var shA=0,shB=0,shC=0;
+    mcRows.filter(function(r){ return parseYear(r.date)+"-"+String(parseMonth(r.date)).padStart(2,"0")===k; })
+      .forEach(function(r){ var s=String(r.shift).toUpperCase(); if(s==="A") shA+=(+r.output||0); else if(s==="B") shB+=(+r.output||0); else shC+=(+r.output||0); });
+    moA.push(shA); moB.push(shB); moC.push(shC); cumMo+=shA+shB+shC; moAccData.push(cumMo);
+  });
+  var moAccTarget=[],cumMoT=0;
+  moKeys.forEach(function(){ cumMoT+=p.target||0; moAccTarget.push(cumMoT); });
+  var lastMoAcc=cumMo, lastMoAccT=cumMoT;
+  var maxMoBar=Math.max.apply(null,moA.map(function(v,i){ return v+(moB[i]||0)+(moC[i]||0); }).concat([0]))*1.5;
+  var maxMoY2=Math.max.apply(null,moAccTarget.concat(moAccData).concat([0]))*1.5;
+
+  mkChart("cMonthly","bar",moLabels,[
+    {label:"Shift A",data:moA,backgroundColor:colors.shiftA+"cc",stack:"s",order:3},
+    {label:"Shift B",data:moB,backgroundColor:colors.shiftB+"cc",stack:"s",order:3},
+    {label:"Shift C",data:moC,backgroundColor:colors.shiftC+"cc",stack:"s",order:3},
+    {label:"Target",data:Array(moLabels.length).fill(p.target||0),type:"line",borderColor:colors.target,backgroundColor:"transparent",borderDash:[4,3],pointRadius:0,borderWidth:1.5,yAxisID:"y",order:1,clip:false},
+    {label:"Acc.Target",data:moAccTarget,type:"line",borderColor:colors.accTarget,backgroundColor:"transparent",pointRadius:0,borderWidth:2,yAxisID:"y2",order:1,clip:false},
+    {label:"Accumulate",data:moAccData,type:"line",borderColor:colors.moAcc,backgroundColor:"transparent",pointRadius:2,borderWidth:2,yAxisID:"y2",order:1,clip:false}
+  ],{
+    animation:{duration:600,easing:"easeInOutQuart"},
+    scales:{
+      y:{stacked:true,position:"left",ticks:{display:false},grid:{display:false},max:maxMoBar||undefined},
+      y2:{position:"right",ticks:{display:false},grid:{display:false},max:maxMoY2||undefined}
+    }
+  },[],[]);
+
+  buildLegend("legMonthly",[
+    {dot:true,color:colors.shiftA,label:"A"},{dot:true,color:colors.shiftB,label:"B"},{dot:true,color:colors.shiftC,label:"C"},
+    {dot:false,color:colors.target,label:"Target"},{dot:false,color:colors.accTarget,label:"Acc.Target"},{dot:false,color:colors.moAcc,label:"Accumulate"}
+  ]);
+
+  // Cost chart
+  var costLabels=[],costMoData=[],costCumData=[],cum2=0;
+  moKeys.forEach(function(k){
+    var parts=k.split("-"); costLabels.push(MONTHS[+parts[1]-1]+" "+parts[0].slice(2));
+    var c=Math.round(costByMo[k]||0); costMoData.push(c); cum2+=c; costCumData.push(Math.round(cum2));
+  });
+  var maxCostY=Math.max.apply(null,costMoData.map(function(v){ return Math.abs(v)||0; }).concat([0]))*1.5;
+  var maxCostY2=Math.max.apply(null,costCumData.concat([0]))*1.5;
+
+  mkChart("cCost","bar",costLabels,[
+    {label:"Monthly",data:costMoData,stack:"cs",order:3,backgroundColor:costMoData.map(function(v){ return v>=0?colors.costPos+"cc":colors.costNeg+"cc"; })},
+    {label:"Cumulative",data:costCumData,type:"line",borderColor:colors.costCum,backgroundColor:"transparent",pointRadius:2,borderWidth:2,yAxisID:"y2",order:1,clip:false}
+  ],{
+    animation:{duration:600,easing:"easeInOutQuart"},
+    scales:{
+      y:{ticks:{display:false},grid:{display:false},max:maxCostY||undefined},
+      y2:{position:"right",ticks:{display:false},grid:{display:false},max:maxCostY2||undefined}
+    }
+  },[{matchLabel:"Cumulative",label:"Total: "+fmtTHB(cum2),color:colors.costCum}],[]);
+
+  buildLegend("legCost",[
+    {dot:true,color:colors.costPos,label:"Saving(+)"},{dot:true,color:colors.costNeg,label:"Saving(-)"},{dot:false,color:colors.costCum,label:"Cumulative"}
+  ]);
+}
+
+// ══════════════════════════════════════════════════════════
+//  CHART BUILDER
+// ══════════════════════════════════════════════════════════
+function mkChart(canvasId,type,labels,datasets,extraOpts,endLabels,todayIdx){
+  if(charts[canvasId]) charts[canvasId].destroy();
+  var plugin={
+    id:"lbl_"+canvasId,
+    afterDraw:function(chart){
+      var ctx=chart.ctx; ctx.save(); ctx.restore(); ctx.save();
+      ctx.font="600 10px 'IBM Plex Mono',monospace"; ctx.textAlign="center"; ctx.textBaseline="bottom";
+      var totals={};
+      chart.data.datasets.forEach(function(ds){ if(ds.stack!=="s") return; ds.data.forEach(function(v,i){ totals[i]=(totals[i]||0)+(+v||0); }); });
+      Object.keys(totals).forEach(function(i){
+        var total=totals[i]; if(!total) return;
+        var meta=chart.getDatasetMeta(0); if(!meta.data[i]) return;
+        ctx.fillStyle="#4a5568";
+        ctx.fillText(total>=1000?(total/1000).toFixed(1)+"k":total, meta.data[i].x, chart.scales.y.getPixelForValue(total)-3);
+      });
+      chart.data.datasets.forEach(function(ds,di){
+        if(ds.stack!=="cs") return;
+        var meta=chart.getDatasetMeta(di);
+        meta.data.forEach(function(bar,i){
+          var v=ds.data[i]; if(!v&&v!==0) return;
+          var label=Math.abs(v)>=1000?(v/1000).toFixed(1)+"k":v;
+          ctx.fillStyle="#4a5568"; ctx.textAlign="center"; ctx.textBaseline=v>=0?"bottom":"top";
+          ctx.fillText(label,bar.x,v>=0?bar.y-3:bar.y+3);
+        });
+      });
+      if(endLabels&&endLabels.length){
+        ctx.font="bold 10px 'IBM Plex Mono',monospace"; ctx.textAlign="left"; ctx.textBaseline="middle";
+        endLabels.forEach(function(el){
+          chart.data.datasets.forEach(function(ds,di){
+            if(ds.type!=="line") return;
+            if((ds.label||"").trim()!==(el.matchLabel||"").trim()) return;
+            var meta=chart.getDatasetMeta(di), lastIdx=-1;
+            ds.data.forEach(function(v,i){ if(v!==null&&v!==undefined) lastIdx=i; });
+            if(lastIdx===-1||!meta.data[lastIdx]) return;
+            var px=meta.data[lastIdx].x+8, py=meta.data[lastIdx].y;
+            if(px>chart.chartArea.right-10){ ctx.textAlign="right"; px=meta.data[lastIdx].x-4; }
+            ctx.fillStyle=el.color; ctx.fillText(el.label,px,py); ctx.textAlign="left";
+          });
+        });
+      }
+      if(todayIdx!==undefined&&todayIdx>=0){
+        var meta0=chart.getDatasetMeta(0);
+        if(meta0&&meta0.data[todayIdx]){
+          var tx=meta0.data[todayIdx].x, ca=chart.chartArea;
+          ctx.save(); ctx.strokeStyle="rgba(220,38,38,0.5)"; ctx.lineWidth=1.5; ctx.setLineDash([4,3]);
+          ctx.beginPath(); ctx.moveTo(tx,ca.top); ctx.lineTo(tx,ca.bottom); ctx.stroke();
+          ctx.fillStyle="#dc2626"; ctx.font="bold 9px 'IBM Plex Mono',monospace"; ctx.textAlign="center"; ctx.textBaseline="top";
+          ctx.fillText("TODAY",tx,ca.top+2); ctx.restore();
+        }
+      }
+      ctx.restore();
+    }
+  };
+  var ctx=id(canvasId).getContext("2d");
+  charts[canvasId]=new Chart(ctx,{
+    type:type, data:{labels:labels,datasets:datasets},
+    options:Object.assign({
+      responsive:true, maintainAspectRatio:false,
+      layout:{padding:{right:100}},
+      plugins:{legend:{display:false},tooltip:{mode:"index",intersect:false,backgroundColor:"rgba(255,255,255,.97)",titleColor:"#1a202c",bodyColor:"#4a5568",borderColor:"#e2e8f0",borderWidth:1,callbacks:{label:function(ctx){ var v=ctx.parsed.y; if(v===null||v===undefined) return null; return " "+ctx.dataset.label+": "+(v>=1000||v<=-1000?v.toLocaleString():v); }}}},
+      scales:{x:{ticks:{color:"#718096",font:{size:10},maxRotation:0},grid:{display:false}}}
+    },extraOpts||{}),
+    plugins:[plugin]
+  });
+}
+
+function buildLegend(elId,items){
+  var el=id(elId); if(!el) return;
+  el.innerHTML=items.map(function(item){
+    var mark=item.dot?'<div class="leg-dot" style="background:'+item.color+'"></div>':'<div class="leg-line" style="background:'+item.color+'"></div>';
+    return '<div class="leg-item">'+mark+item.label+'</div>';
+  }).join("");
+}
+
+// ══════════════════════════════════════════════════════════
+//  COLOR PICKER
+// ══════════════════════════════════════════════════════════
+function _colorKey(){ return "dashColors_"+(selMc||"default"); }
+function loadColors(){
+  try{ var s=localStorage.getItem(_colorKey()); if(!s) s=localStorage.getItem("dashColors"); return s?Object.assign({},DEFAULT_COLORS,JSON.parse(s)):Object.assign({},DEFAULT_COLORS); }
+  catch(e){ return Object.assign({},DEFAULT_COLORS); }
+}
+function saveColors(){ try{ localStorage.setItem(_colorKey(),JSON.stringify(colors)); }catch(e){} }
+function resetColors(){ colors=Object.assign({},DEFAULT_COLORS); saveColors(); buildColorPanel(); renderDash(); toast("↺ Reset สีแล้วครับ","ok"); }
+function toggleColorPanel(){ colors=loadColors(); buildColorPanel(); id("colorPanel").classList.toggle("open"); }
+function buildColorPanel(){
+  var cont=id("colorRows"); cont.innerHTML="";
+  var mcLbl=document.createElement("div"); mcLbl.style.cssText="font-size:10px;color:var(--ink3);margin-bottom:8px;font-weight:600"; mcLbl.textContent="สีสำหรับ: "+(selMc||"—"); cont.appendChild(mcLbl);
+  Object.keys(DEFAULT_COLORS).forEach(function(key){
+    var row=document.createElement("div"); row.className="color-row";
+    var lbl=document.createElement("span"); lbl.className="color-row-label"; lbl.textContent=COLOR_LABELS[key]||key;
+    var pal=document.createElement("div"); pal.className="palette";
+    PALETTE.forEach(function(hex){
+      var dot=document.createElement("div"); dot.className="pal-dot"+(colors[key]===hex?" active":""); dot.style.background=hex; dot.title=hex;
+      dot.onclick=(function(k,h,d){ return function(){ colors[k]=h; saveColors(); d.parentNode.querySelectorAll(".pal-dot").forEach(function(x){ x.classList.remove("active"); }); d.classList.add("active"); renderDash(); }; })(key,hex,dot);
+      pal.appendChild(dot);
+    });
+    row.appendChild(lbl); row.appendChild(pal); cont.appendChild(row);
+  });
+}
+
+// ══════════════════════════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════════════════════════
+function parseYear(s){ var m=String(s).match(/\d{4}/); return m?+m[0]:0; }
+function parseMonth(s){ var m=String(s).match(/\s(\w{3})\s/); return m?MONTHS.indexOf(m[1])+1:0; }
+function parseDay(s){ var m=String(s).match(/^(\d+)/); return m?+m[1]:0; }
+function fmtTHB(n){ return (n>=0?"+":"")+Math.round(n).toLocaleString(); }
+function id(i){ return document.getElementById(i); }
+function toast(msg,type){ var t=id("toast"); t.textContent=msg; t.className="show "+(type||""); setTimeout(function(){ t.className=""; },2800); }
+[["fDate","date"],["fMc","mc"],["fJo","jo"],["fOut","out"]].forEach(function(pair){ id(pair[0])&&id(pair[0]).addEventListener("input",function(){ clrE(pair[1]); }); });
+</script>
+</body>
+</html>
