@@ -356,7 +356,7 @@ tbody td:first-child{color:var(--ink3);font-family:'IBM Plex Mono',monospace;fon
 // ══════════════════════════════════════════════════════════
 var API_KEY = "AIzaSyDD1S3f8LnmGWlzZ9F0QxHhe_P850sKshE";
 var SS_ID   = "12y9V7-mSdSC--uhK9Yb5wSAHIpGxlB-l_DEAg17fTZw";
-var GAS_URL = "https://script.google.com/macros/s/AKfycbxwF8BRsDi9Le-EZPzGhvwAb4r90t1WnsWD9wY2E7_5FjoaPG992W1JSK2gjNzqUfXJ/exec"; // ← ใส่ GAS Web App URL สำหรับเขียนข้อมูล (จาก project เดิม)
+var GAS_URL = ""; // ← ใส่ GAS Web App URL สำหรับเขียนข้อมูล (จาก project เดิม)
 
 var DATA_SHEET   = "Data";
 var CONFIG_SHEET = "Config";
@@ -430,33 +430,65 @@ function refreshData() {
 }
 
 function parseConfig(values) {
-  // Col A(0)=MC, Col C(2)=Shift, Col E-K(4-10)=Params
   var mc=[], shift=[], params={};
+  if (!values || !values.length) return;
+  // ใช้ header row 1 map columns
+  var hdrs = (values[0]||[]).map(function(h){ return String(h).trim().toLowerCase(); });
+  var iMC    = hdrs.indexOf("mc");
+  var iShift = hdrs.indexOf("shift");
+  var iPMC   = hdrs.indexOf("mc");  // params table ใช้ header เดียวกัน
+  // หา column group params (ดูจาก "target/เดือน")
+  var iPTar = -1;
+  hdrs.forEach(function(h,i){ if(h.indexOf("target")>=0&&i>3) iPTar=i; });
+  // fallback: ใช้ fixed positions ถ้า header ไม่ match
+  var pBase = iPTar > 0 ? iPTar - 1 : 4; // MC name column ของ params
+
   for (var i = 1; i < values.length; i++) {
     var r = values[i] || [];
-    if (r[0] && !String(r[0]).startsWith("↑")) mc.push(String(r[0]).trim());
-    if (r[2] && !String(r[2]).startsWith("↑")) shift.push(String(r[2]).trim());
-    if (r[4] && !String(r[4]).startsWith("↑")) {
-      var mc_name = String(r[4]).trim();
-      params[mc_name] = {
-        target : +r[5]||0, price:+r[6]||0, bench:+r[7]||0,
-        mcost  : +r[8]||0, salvage:+r[9]||0, life:+r[10]||10
+    // Col A = MC list
+    var v0 = String(r[0]||"").trim();
+    if (v0 && !v0.startsWith("↑")) mc.push(v0);
+    // Col C = Shift list (index 2)
+    var v2 = String(r[2]||"").trim();
+    if (v2 && !v2.startsWith("↑")) shift.push(v2);
+    // Params: MC name ใน col E (index 4)
+    var v4 = String(r[4]||"").trim();
+    if (v4 && !v4.startsWith("↑") && v4 !== "mc" && v4 !== "") {
+      params[v4] = {
+        target : +(String(r[5]||0).replace(/,/g,""))||0,
+        price  : +(String(r[6]||0).replace(/,/g,""))||0,
+        bench  : +(String(r[7]||0).replace(/,/g,""))||0,
+        mcost  : +(String(r[8]||0).replace(/,/g,""))||0,
+        salvage: +(String(r[9]||0).replace(/,/g,""))||0,
+        life   : +(String(r[10]||10).replace(/,/g,""))||10
       };
     }
   }
+  // dedup
+  mc    = mc.filter(function(v,i,a){ return a.indexOf(v)===i; });
+  shift = shift.filter(function(v,i,a){ return a.indexOf(v)===i; });
   CFG = { mc:mc, shift:shift, params:params };
 }
 
 function parseData(values) {
   rows = [];
   if (!values || values.length < 2) return;
+  // ใช้ header row map เพื่อรองรับ Sheets API ที่ตัด trailing empty cells ออก
+  var hdrs = (values[0]||[]).map(function(h){ return String(h).trim().toLowerCase(); });
+  function gc(r, name) { var i=hdrs.indexOf(name); return i>=0?(r[i]||""):""; }
   for (var i = 1; i < values.length; i++) {
     var r = values[i] || [];
     if (!r[0]) continue;
     rows.push({
-      no: r[0], date: r[1]||"", mc: r[2]||"", shift: r[3]||"",
-      jo: r[4]||"", code: r[5]||"", output: +r[6]||0, timestamp: r[7]||"",
-      sheetRow: i + 1
+      no       : gc(r,"no.")||r[0]||"",
+      date     : gc(r,"date")||"",
+      mc       : gc(r,"mc")||"",
+      shift    : gc(r,"shift")||"",
+      jo       : gc(r,"jo")||"",
+      code     : gc(r,"product code")||"",
+      output   : +(String(gc(r,"output")||0).replace(/,/g,""))||0,
+      timestamp: gc(r,"timestamp")||"",
+      sheetRow : i + 1
     });
   }
 }
@@ -898,25 +930,39 @@ function resetColors(){ colors=Object.assign({},DEFAULT_COLORS); saveColors(); b
 function toggleColorPanel(){ colors=loadColors(); buildColorPanel(); id("colorPanel").classList.toggle("open"); }
 function buildColorPanel(){
   var cont=id("colorRows"); cont.innerHTML="";
-  var mcLbl=document.createElement("div"); mcLbl.style.cssText="font-size:10px;color:var(--ink3);margin-bottom:8px;font-weight:600"; mcLbl.textContent="สีสำหรับ: "+(selMc||"—"); cont.appendChild(mcLbl);
+  var mcLbl=document.createElement("div");
+  mcLbl.style.cssText="font-size:10px;color:var(--ink3);margin-bottom:8px;font-weight:600";
+  mcLbl.textContent="สีสำหรับ: "+(selMc||"—");
+  cont.appendChild(mcLbl);
+
   Object.keys(DEFAULT_COLORS).forEach(function(key){
     var row=document.createElement("div"); row.className="color-row";
     var lbl=document.createElement("span"); lbl.className="color-row-label"; lbl.textContent=COLOR_LABELS[key]||key;
-    var pal=document.createElement("div"); pal.className="palette";
-    PALETTE.forEach(function(hex){
-      var dot=document.createElement("div"); dot.className="pal-dot"+(colors[key]===hex?" active":""); dot.style.background=hex; dot.title=hex;
-      dot.onclick=(function(k,h,d){ return function(){ colors[k]=h; saveColors(); d.parentNode.querySelectorAll(".pal-dot").forEach(function(x){ x.classList.remove("active"); }); d.classList.add("active"); renderDash(); }; })(key,hex,dot);
-      pal.appendChild(dot);
+
+    var swatch=document.createElement("div"); swatch.className="color-swatch"; swatch.style.background=colors[key];
+    var inp=document.createElement("input"); inp.type="color"; inp.value=colors[key];
+    inp.addEventListener("input",function(){
+      colors[key]=inp.value; swatch.style.background=inp.value; saveColors(); renderDash();
     });
-    row.appendChild(lbl); row.appendChild(pal); cont.appendChild(row);
+    swatch.appendChild(inp);
+    row.appendChild(lbl); row.appendChild(swatch); cont.appendChild(row);
   });
 }
 
 // ══════════════════════════════════════════════════════════
 //  HELPERS
 // ══════════════════════════════════════════════════════════
-function parseYear(s){ var m=String(s).match(/\d{4}/); return m?+m[0]:0; }
-function parseMonth(s){ var m=String(s).match(/\s(\w{3})\s/); return m?MONTHS.indexOf(m[1])+1:0; }
+function parseYear(s){
+  var str=String(s);
+  var m4=str.match(/\d{4}/); if(m4) return +m4[0];
+  // yy format เช่น 23-Apr-25
+  var m2=str.match(/[\s\-\/](\d{2})$/); if(m2) return +m2[1]+2000;
+  return 0;
+}
+function parseMonth(s){
+  var m=String(s).match(/[\s\-\/](\w{3})[\s\-\/]/);
+  return m?MONTHS.indexOf(m[1])+1:0;
+}
 function parseDay(s){ var m=String(s).match(/^(\d+)/); return m?+m[1]:0; }
 function fmtTHB(n){ return (n>=0?"+":"")+Math.round(n).toLocaleString(); }
 function id(i){ return document.getElementById(i); }
