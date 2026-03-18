@@ -358,7 +358,7 @@ tbody td:first-child{color:var(--ink3);font-family:'IBM Plex Mono',monospace;fon
 // ══════════════════════════════════════════════════════════
 var API_KEY = "AIzaSyDD1S3f8LnmGWlzZ9F0QxHhe_P850sKshE";
 var SS_ID   = "12y9V7-mSdSC--uhK9Yb5wSAHIpGxlB-l_DEAg17fTZw";
-var GAS_URL = "https://script.google.com/macros/s/AKfycbxwF8BRsDi9Le-EZPzGhvwAb4r90t1WnsWD9wY2E7_5FjoaPG992W1JSK2gjNzqUfXJ/exec"; // ← ใส่ GAS Web App URL สำหรับเขียนข้อมูล (จาก project เดิม)
+var GAS_URL = "https://script.google.com/macros/s/AKfycbxwF8BRsDi9Le-EZPzGhvwAb4r90t1WnsWD9wY2E7_5FjoaPG992W1JSK2gjNzqUfXJ/exec";
 
 var DATA_SHEET   = "Data";
 var CONFIG_SHEET = "Config";
@@ -483,7 +483,7 @@ function parseData(values) {
     if (!r[0]) continue;
     rows.push({
       no       : gc(r,"no.")||r[0]||"",
-      date     : gc(r,"date")||"",
+      date     : normalizeDate(gc(r,"date")||""),
       mc       : gc(r,"mc")||"",
       shift    : gc(r,"shift")||"",
       jo       : gc(r,"jo")||"",
@@ -977,6 +977,13 @@ function buildColorPanel(){
 // ══════════════════════════════════════════════════════════
 //  HELPERS
 // ══════════════════════════════════════════════════════════
+function normalizeDate(s) {
+  var m = String(s).match(/^(\d+)[\-\/](\w{3})[\-\/](\d{2,4})$/);
+  if (!m) return s;
+  var y = m[3].length === 2 ? +m[3] + 2000 : +m[3];
+  return m[1] + " " + m[2] + " " + y;
+}
+
 function parseYear(s){
   var str=String(s);
   var m4=str.match(/\d{4}/); if(m4) return +m4[0];
